@@ -3,10 +3,9 @@ import pytest
 from werkzeug import Request
 from werkzeug import Response
 import time
+import uuid
 
 logger = logging.getLogger(__name__)
-
-g_response = False
 
 inputpage = """
 <!DOCTYPE html>
@@ -24,28 +23,34 @@ inputpage = """
 </body>
 </html>"""
 
-def web_output_handler(request: Request):
-    return Response(inputpage, content_type="text/html")
+class UserInputStorage:
+    def __init__(self, httpserver):
+        self.prompt = None
+        self.response = None
+        self.request_id = uuid.uuid4()
+        httpserver.expect_request("/input").respond_with_handler(self._web_output_handler)
+        httpserver.expect_request("/userinput").respond_with_handler(self._web_input_handler)
 
-def web_input_handler(request: Request):
-    global g_response
-    g_response = True
+    def _web_output_handler(self, request: Request):
+        # TODO: fill template with prompt
+        return Response(inputpage, content_type="text/html")
 
-    resp = request.form['usertext']
+    def _web_input_handler(self, request: Request):
+        self.response = request.form['usertext']
+        rsp = f'Your answer: {self.response}'
+        return Response(rsp)
 
-    rsp = f'Your answer: {resp}'
+    def get(self, prompt=None, timeout=60):
+        self.prompt = prompt
+        self.response = None
+        self.timeout = timeout
 
-    return Response(rsp)
-
-def wait_for_input():
-    # TODO: add timeout
-    while not g_response:
-        time.sleep(.1)
-
-    return
+        t_start = time.monotonic()
+        while (not self.response
+               and time.monotonic() - t_start < timeout):
+            time.sleep(.1)
 
 @pytest.fixture
 def user_input(httpserver):
-    httpserver.expect_request("/input").respond_with_handler(web_output_handler)
-    httpserver.expect_request("/userinput").respond_with_handler(web_input_handler)
-    # TODO: return class with .wait and .get objects
+    i = UserInputStorage(httpserver)
+    return i
