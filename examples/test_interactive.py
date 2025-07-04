@@ -4,7 +4,14 @@ logger = logging.getLogger(__name__)
 
 def test_ui(user_input):
     logger.info('Wait for first input')
-    user_input.get()
+    rsp = user_input.wait("do something", timeout=10)
+    assert rsp
+    logger.info(f'1st rsp: {rsp}')
+
     logger.info('Wait for second input')
-    user_input.get()
-    assert None
+    rsp = user_input.get("Measure 12V power supply voltage")
+    logger.info(f'2nd rsp: {rsp}')
+    assert rsp
+    voltage = float(rsp)
+
+    assert voltage > 11.5 and voltage < 12.5
