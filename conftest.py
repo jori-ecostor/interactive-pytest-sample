@@ -1,4 +1,5 @@
 import logging
+import webbrowser
 import pytest
 from werkzeug import Request
 from werkzeug import Response
@@ -46,6 +47,7 @@ class UserInputStorage:
         self.response = None
         self.response_required = False
         self.prompt_id = str(uuid.uuid4())
+        self.server = httpserver
         httpserver.expect_request("/input").respond_with_handler(self._web_output_handler)
         httpserver.expect_request("/userinput").respond_with_handler(self._web_input_handler)
 
@@ -60,7 +62,7 @@ class UserInputStorage:
             if not self.response:
                 self.response = True
 
-        rsp = f'Your answer: {self.response} (id {prompt_id})'
+        rsp = f'Prompt: {self.prompt}\nYour answer: {self.response}\n(prompt id {prompt_id})'
         return Response(rsp)
 
     def get(self, prompt, timeout=60, response_required=True):
@@ -69,6 +71,9 @@ class UserInputStorage:
         self.response = None
         self.response_required = response_required
         self.timeout = timeout
+
+        logger.info(f'Requesting user input: prompt {prompt}, response required: {response_required}')
+        webbrowser.open(f'http://{self.server.host}:{self.server.port}/input')
 
         t_start = time.monotonic()
         while (not self.response

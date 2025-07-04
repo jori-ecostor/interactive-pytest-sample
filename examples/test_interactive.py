@@ -4,7 +4,7 @@ logger = logging.getLogger(__name__)
 
 def test_ui(user_input):
     logger.info('Wait for first input')
-    rsp = user_input.wait("do something", timeout=10)
+    rsp = user_input.wait("do something", timeout=30)
     assert rsp
     logger.info(f'1st rsp: {rsp}')
 
